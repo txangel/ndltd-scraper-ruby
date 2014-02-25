@@ -17,17 +17,21 @@ class NDLTDScraper
     end
 
     def run
-
-        # begin do-while
         begin
+            # get xml content
             content = get_xml_response(build_uri()).body
 
+            # increase bytes received
             @bytes_received += content.length
 
+            # write file to storage
             store_xml_response(content)
 
+            # pull next resumption token
             update_resumption_token(content)
 
+            # print percentage
+            print_percentage_done(@resumption_token)
         end while @resumption_token
     end
 
@@ -74,6 +78,15 @@ class NDLTDScraper
             end
         end
 
+        def print_percentage_done(token)
+            if token
+                parts = token.split('!')
+                percent = parts[4].to_f / parts[5].to_f * 100
+                puts "#{percent.round(2)}%"
+            else
+                puts "100%"
+            end
+        end
 end
 
 if __FILE__ == $PROGRAM_NAME
