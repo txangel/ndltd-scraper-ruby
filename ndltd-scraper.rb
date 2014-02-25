@@ -10,22 +10,36 @@ require 'net/http'
 class NDLTDScraper
     def initialize(storage_dir)
         @storage_dir = storage_dir
+        @resumption_token = nil
+        @bytes_received = 0
+        @files_written = 0
+        @base_url = 'http://union.ndltd.org/OAI-PMH/'
     end
 
     def run
-        base_url = 'http://union.ndltd.org/OAI-PMH/'
-
-        file_id = 0
-
-        resumption_token = nil
-
-        bytes_received = 0
-
+        # begin do-while
         begin
-            uri = URI("#{base_url}?verb=ListRecords&" + ( (resumption_token) ? "resumptionToken=#{resumption_token}" : 'metadataPrefix=oai_dc' ) )
+            uri = get_uri()
 
-            puts "Harvesting #{uri}"
+            content = get_xml_response(uri).body
 
+            @bytes_received += content.length
+
+            store_xml_response(content)
+
+            update_resumption_token(content)
+
+        end while @resumption_token
+    end
+
+    private
+
+        def get_uri()
+            params = (@resumption_token ? "&resumptionToken=#{@resumption_token}" : '&metadataPrefix=oai_dc')
+            return URI("#{@base_url}?verb=ListRecords#{params}")
+        end
+
+        def get_xml_response(uri)
             res = Net::HTTP.get_response(uri)
             while res.code == 503
                 sleep_time = res['Retry-After'].to_i
@@ -37,30 +51,24 @@ class NDLTDScraper
                     raise ArgumentError, "invalid sleep time #{res['Retry-After']}"
                 end
             end
+            return res
+        end
 
-            content = res.body
-
-            puts "Got response of #{content.length} bytes"
-
-            bytes_received += content.length
-
-            file = File.join(@storage_dir, "data_#{file_id}.xml")
-
+        def store_xml_response(xml)
+            file = File.join(@storage_dir, "data_#{@files_written}.xml")
             puts "Writing to #{file}"
-            File.open(file, 'w') {|f| f.write(content)}
+            File.open(file, 'w') {|f| f.write(xml)}
+            @files_written += 1
+        end
 
-            file_id += 1
-
-            resumption_token = nil
-            if content =~ /<resumptionToken[^>]*>([^<]+)<\/resumptionToken>/
-                puts "Detected resumption token"
-                resumption_token = $1
+        def update_resumption_token(str)
+            if str =~ /<resumptionToken[^>]*>([^<]+)<\/resumptionToken>/
+                @resumption_token = $1
+            else
+                @resumption_token = nil
             end
+        end
 
-        end while resumption_token
-
-        puts "Final bytes: #{bytes_received}"
-    end
 end
 
 if __FILE__ == $PROGRAM_NAME
