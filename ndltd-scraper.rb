@@ -17,11 +17,10 @@ class NDLTDScraper
     end
 
     def run
+
         # begin do-while
         begin
-            uri = get_uri()
-
-            content = get_xml_response(uri).body
+            content = get_xml_response(build_uri()).body
 
             @bytes_received += content.length
 
@@ -32,9 +31,15 @@ class NDLTDScraper
         end while @resumption_token
     end
 
+    def reset
+        @resumption_token = nil
+        @bytes_received = 0
+        @files_written = 0
+    end
+
     private
 
-        def get_uri()
+        def build_uri()
             params = (@resumption_token ? "&resumptionToken=#{@resumption_token}" : '&metadataPrefix=oai_dc')
             return URI("#{@base_url}?verb=ListRecords#{params}")
         end
