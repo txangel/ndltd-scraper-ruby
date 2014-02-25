@@ -7,7 +7,7 @@
 
 require 'net/http'
 
-class NDLTDScraper
+class NDLTDDownloader
     def initialize(storage_dir)
         @storage_dir = storage_dir
         @resumption_token = nil
@@ -102,7 +102,5 @@ if __FILE__ == $PROGRAM_NAME
         end
     end
 
-    d = NDLTDScraper.new(storage_dir)
-    d.run()
-
+    NDLTDDownloader.new(storage_dir).run()
 end
