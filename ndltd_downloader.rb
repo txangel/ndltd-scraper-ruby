@@ -6,14 +6,22 @@
 # ----------------------------------------------------------------------------
 
 require 'net/http'
+require 'optparse'
 
 class NDLTDDownloader
-    def initialize(storage_dir)
+    def initialize(storage_dir, token = nil)
         @storage_dir = storage_dir
-        @resumption_token = nil
+        @resumption_token = token
         @bytes_received = 0
         @files_written = 0
         @base_url = 'http://union.ndltd.org/OAI-PMH/'
+
+
+        if @resumption_token
+            parts = token.split('!')
+            @files_written = parts[4].to_i / 1000
+        end
+
     end
 
     def run
@@ -45,7 +53,7 @@ class NDLTDDownloader
 
         def build_uri()
             params = (@resumption_token ? "&resumptionToken=#{@resumption_token}" : '&metadataPrefix=oai_dc')
-            return URI("#{@base_url}?verb=ListRecords#{params}")
+            return URI(URI.encode("#{@base_url}?verb=ListRecords#{params}"))
         end
 
         def get_xml_response(uri)
@@ -92,6 +100,16 @@ end
 if __FILE__ == $PROGRAM_NAME
     storage_dir = nil
 
+    token = nil
+
+    OptionParser.new do |opts|
+      opts.banner = "Usage: ndltd_downloader.rb <output directory> [--token resumption_token]"
+
+      opts.on('-t', '--token ARG', 'Start from a resumptionToken') do |arg|
+        token = arg
+      end
+    end.parse!
+
     # arg handling
     if ARGV.length == 0 or ARGV[0].length == 0
         raise ArgumentError, 'Expected output directory argument'
@@ -100,7 +118,7 @@ if __FILE__ == $PROGRAM_NAME
         if not Dir.exists?(storage_dir)
             Dir.mkdir(ARGV[0])
         end
-    end
 
-    NDLTDDownloader.new(storage_dir).run()
+        NDLTDDownloader.new(storage_dir, token).run()
+    end
 end
