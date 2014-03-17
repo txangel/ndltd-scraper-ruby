@@ -9,8 +9,10 @@ require 'net/http'
 require 'optparse'
 
 class NDLTDDownloader
-    def initialize(storage_dir, token = nil)
+    def initialize(storage_dir, token = nil, start_date = nil, end_date = nil)
         @storage_dir = storage_dir
+        @start_date = Time.parse(start_date).iso8601
+        @end_date = end_date
         @resumption_token = token
         @bytes_received = 0
         @files_written = 0
@@ -20,6 +22,14 @@ class NDLTDDownloader
         if @resumption_token
             parts = token.split('!')
             @files_written = parts[4].to_i / 1000
+        end
+
+        if @start_date
+            @start_date = Time.parse(start_date).iso8601
+        end
+
+        if @end_date
+            @end_date = Time.parse(end_date).iso8601
         end
 
     end
@@ -101,12 +111,22 @@ if __FILE__ == $PROGRAM_NAME
     storage_dir = nil
 
     token = nil
+    start_date = nil
+    end_date = nil
 
     OptionParser.new do |opts|
       opts.banner = "Usage: ndltd_downloader.rb <output directory> [--token resumption_token]"
 
       opts.on('-t', '--token ARG', 'Start from a resumptionToken') do |arg|
         token = arg
+      end
+
+      opts.on('-s', '--start_date ARG', 'All documents changed from this date (iso8601)') do |arg|
+        start_date = arg
+      end
+
+      opts.on('-e', '--end_date ARG', 'All documents changed until this date (iso8601)') do |arg|
+        end_date = arg
       end
     end.parse!
 
@@ -119,6 +139,6 @@ if __FILE__ == $PROGRAM_NAME
             Dir.mkdir(ARGV[0])
         end
 
-        NDLTDDownloader.new(storage_dir, token).run()
+        NDLTDDownloader.new(storage_dir, token start_date, end_date).run()
     end
 end
