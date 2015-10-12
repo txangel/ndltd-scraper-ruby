@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 # Ruby version of the Harvey harvester script
 # ----------------------------------------------------------------------------
 # TODO: support updates by including command line options for ListRecord from
@@ -7,6 +8,7 @@
 
 require 'net/http'
 require 'optparse'
+require 'time'
 
 class NDLTDDownloader
     def initialize(storage_dir, token = nil, start_date = nil, end_date = nil)
@@ -139,6 +141,6 @@ if __FILE__ == $PROGRAM_NAME
             Dir.mkdir(ARGV[0])
         end
 
-        NDLTDDownloader.new(storage_dir, token start_date, end_date).run()
+        NDLTDDownloader.new(storage_dir, token, start_date, end_date).run()
     end
 end
